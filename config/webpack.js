@@ -8,10 +8,19 @@ const cssLoaders = {
   stylus: getCssLoaders('stylus')
 }
 
+// TODO: Create a production config with minification and no HMR.
 const webpackConfig = module.exports = {
   devtool: '#cheap-module-eval-source-map',
   entry: {
-    'app': ['./hot.js', './app.js']
+    'app': ['./client/webpack/hot.js', './client/client.js']
+  },
+  stats: {
+    colors: true,
+    entrypoints: true,
+    hash: false,
+    timings: false,
+    chunks: false,
+    assets: false
   },
   output: {
     path: resolve('dist'),

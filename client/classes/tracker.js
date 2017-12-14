@@ -1,5 +1,4 @@
 /* global ImageData */
-import _ from 'lodash'
 import Pixel from './pixel'
 import Color from './color'
 import Target from './target'
@@ -52,7 +51,7 @@ class Tracker {
     navigator.mediaDevices.enumerateDevices()
       .then(devices => {
         // Find the camera that faces outward.
-        _.each(devices, device => {
+        devices.forEach(device => {
           if (device.kind === 'videoinput') {
             this.deviceId = this.deviceId || device.deviceId
           }
@@ -123,7 +122,7 @@ class Tracker {
       targets.forEach(target => {
         const diff = target.hueDiff(pixel)
         if (diff < target.tolerance) {
-          console.log(diff, target.name)
+          // console.log(diff, target.name)
           const path = new Path(this, target, pixel)
           candidates.push({ target, diff })
         }

@@ -1,0 +1,19 @@
+{
+  "lighterRun": {
+    "ignore": [
+      ".DS_Store",
+      ".cache",
+      ".git",
+      ".idea",
+      ".project",
+      "client",
+      "coverage",
+      "data",
+      "logs",
+      "test"
+    ],
+    "watchDirs": [
+      "."
+    ]
+  }
+}

@@ -6,7 +6,7 @@
 </template>
 
 <script>
-  import Tracker from '../app/tracker'
+  import Tracker from '../classes/tracker'
 
   export default {
     mounted () {
@@ -19,7 +19,6 @@
           .target({ hex: '#1a5', tolerance: 1, name: 'green' })
           .target({ hex: '#14d', tolerance: 1, name: 'blue' })
           .target({ hex: '#dd1', tolerance: 1, name: 'yellow' })
-          // .target({ hex: '#d13', tolerance: 1, name: 'red' })
     }
   }
 </script>

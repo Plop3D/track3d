@@ -31,13 +31,15 @@ app.use((req, res, next) => {
 })
 
 // Serve static files.
-app.use(express.static('public'))
+app.use(express.static('client/public'))
 
 // Serve webpack dev server with hot module reloading.
 const webpack = require('webpack')
-const webpackConfig = require('./webpack')
+const webpackConfig = require('../config/webpack')
 const compiler = webpack(webpackConfig)
 app.use(require('webpack-hot-middleware')(compiler))
 app.use(require('webpack-dev-middleware')(compiler, {
-  noInfo: true, publicPath: webpackConfig.output.publicPath
+  // publicPath: webpackConfig.output.publicPath,
+  // stats: false,
+  logLevel: 'error'
 }))
