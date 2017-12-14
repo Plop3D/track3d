@@ -1,0 +1,25 @@
+{
+  "httpsPort": 8443,
+  "lighterRun": {
+    "minRestartDelay": 500,
+    "maxRestartDelay": 5000,
+    "restartDelayBackoff": 2,
+    "cleanTime": 2000,
+    "ignore": [
+      ".DS_Store",
+      ".cache",
+      ".git",
+      ".idea",
+      ".project",
+      "app",
+      "coverage",
+      "data",
+      "log",
+      "test",
+      "views"
+    ],
+    "watchDirs": [
+      "."
+    ]
+  }
+}
