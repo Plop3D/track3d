@@ -43,3 +43,14 @@ app.use(require('webpack-dev-middleware')(compiler, {
   // stats: false,
   logLevel: 'error'
 }))
+
+app.io.on('connection', client => {
+  // client.on('frame', data => {
+  //   console.log(data.length)
+  //   fs.writeFileSync('test/frame.json', JSON.stringify(data))
+  // })
+  client.on('frame', data => {
+    console.log(data.length)
+    fs.writeFileSync('test/small.json', JSON.stringify(data))
+  })
+})

@@ -1,8 +1,5 @@
 <template>
-  <div class="video">
-    <video/>
-    <canvas/>
-  </div>
+  <div class="track3d" style="width:480px"></div>
 </template>
 
 <script>
@@ -15,22 +12,16 @@
         window.tracker.stop()
       }
       window.tracker =
-        Tracker.track('.video')
-          .target({ hex: '#1a5', tolerance: 1, name: 'green' })
-          .target({ hex: '#14d', tolerance: 1, name: 'blue' })
-          .target({ hex: '#dd1', tolerance: 1, name: 'yellow' })
+        Tracker.track('.track3d')
+          .target({ hex: '#096', hueTolerance: 40, minSat: 15, name: 'green', limit: 2 })
+          .target({ hex: '#14d', hueTolerance: 40, minSat: 20, name: 'blue', limit: 2 })
+          .target({ hex: '#ff2', hueTolerance: 40, minSat: 25, name: 'yellow', limit: 2 })
     }
   }
 </script>
 
 <style>
-  video, canvas {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 240px;
-    height: 180px;
-    border: 0;
+  html, body {
     margin: 0;
   }
 </style>

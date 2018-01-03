@@ -3,6 +3,9 @@ import Router from 'vue-router'
 import App from './views/app'
 import Home from './views/home'
 import Video from './views/video'
+import client from 'socket.io-client'
+
+window.io = client('//' + window.location.host)
 
 Vue.use(Router)
 

@@ -1,25 +1,27 @@
-import Variance from './variance'
 import Color from './color'
 
 class Pixel extends Color {
-  constructor (tracker, index, x, y) {
-    super(tracker, 0, 0, 0)
-    this.index = index
-    this.dataIndex = index * 4
+  constructor (cam, index, x, y) {
+    super(0, 0, 0)
+    this.cam = cam
     this.x = x
     this.y = y
-    // this.rVariance = new Variance()
-    // this.gVariance = new Variance()
-    // this.bVariance = new Variance()
-    // this.varianceCounter = 0
-    // this.variance = 0
   }
 
-  updateVariance (r, g, b) {
-    this.variance =
-      this.rVariance.update(this.r) +
-      this.gVariance.update(this.g) +
-      this.bVariance.update(this.b)
+  distanceTo (o) {
+    const dx = o.x - this.x
+    const dy = o.y - this.y
+    return Math.sqrt(dx * dx + dy * dy)
+  }
+
+  add (vector) {
+    this.x += vector.x
+    this.y += vector.y
+  }
+
+  subtract (vector) {
+    this.x -= vector.x
+    this.y -= vector.y
   }
 }
 

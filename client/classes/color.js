@@ -6,9 +6,8 @@ let bMin = 0
 let bMax = 255
 
 class Color {
-  constructor (tracker, r, g, b) {
-    this.tracker = tracker
-    this.update(r, g, b)
+  constructor (r, g, b) {
+    this.setRgb(r, g, b)
   }
 
   static base (r, g, b) {
@@ -18,38 +17,25 @@ class Color {
     bMax = 255 + (bMin = Math.round((b - avg) / 2))
   }
 
-  update (r, g, b) {
+  adjustRgb (r, g, b) {
     this.r = r = r < rMin ? 0 : r > rMax ? 255 : r - rMin
     this.g = g = g < gMin ? 0 : g > gMax ? 255 : g - gMin
     this.b = b = b < bMin ? 0 : b > bMax ? 255 : b - bMin
-    const min = Math.min(r, g, b)
-    const max = Math.max(r, g, b)
-    const diff = max - min
-    let hue
-    if (diff) {
-      switch (max) {
-        case r:
-          hue = (g - b) / diff + (g < b ? 6 : 0)
-          break
-        case g:
-          hue = (b - r) / diff + 2
-          break
-        case b:
-          hue = (r - g) / diff + 4
-          break
-      }
-    } else {
-      hue = 0
-    }
-    this.hue = hue
-    this.saturation = diff
   }
 
-  updateVariance (r, g, b) {
-    this.variance =
-      this.rVariance.update(this.r) +
-      this.gVariance.update(this.g) +
-      this.bVariance.update(this.b)
+  setRgb (r, g, b) {
+    this.r = r
+    this.g = g
+    this.b = b
+    let min = r < g ? r : g
+    min = min < b ? min : b
+    let max = r > g ? r : g
+    max = max > b ? max : b
+    this.sat = max - min
+    this.hue = this.sat < 1 ? 0
+      : max === r ? (g - b) / this.sat + (g < b ? 6 : 0)
+      : max === g ? (b - r) / this.sat + 2
+      : (r - g) / this.sat + 4
   }
 
   diff (color) {
@@ -62,7 +48,7 @@ class Color {
 
   hueMatch (color) {
     let diff = Math.abs(this.hue - color.hue)
-    return Math.sqrt(this.saturation / color.saturation) / ((diff < 3 ? diff : 6 - diff) + 1)
+    return Math.sqrt(this.sat / color.sat) / ((diff < 3 ? diff : 6 - diff) + 1)
   }
 
   hueDiff (color) {
