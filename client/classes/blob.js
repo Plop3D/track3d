@@ -1,7 +1,8 @@
 import Chain from './chain'
 
 class Blob {
-  constructor (target) {
+  constructor (cam, target) {
+    this.cam = cam
     this.target = target
     this.chains = []
     this.score = 0
@@ -18,38 +19,17 @@ class Blob {
     const width = cam.width
     const pixels = cam.pixels
     let ups = []
-    let chains
-    let chain = null
-    let score = 0
-    function add () {
-      chains.push(chain)
-      ups.forEach(up => {
-        if ((up.x1 >= chain.x1 && up.x1 <= chain.x2) ||
-            (up.x2 >= chain.x1 && up.x2 <= chain.x2) ||
-            (up.x1 < chain.x1 && up.x2 > chain.x2)) {
-          if (chain.blob) {
-            if (up.blob !== chain.blob) {
-              chain.blob.addBlob(up.blob)
-            }
-          } else {
-            up.blob.addChain(chain, score)
-          }
-        }
-      })
-      if (!chain.blob) {
-        const blob = new Blob(target)
-        blob.addChain(chain, score)
-        blobs.push(blob)
-      }
-      chain = null
-      score = 0
-    }
     for (let y = y1; y <= y2; y++) {
-      chains = []
+      let n = 0
+      let chains = []
+      let lastChain = null
+      let chain = null
+      let score = 0
       for (let x = x1; x <= x2; x++) {
         const i = y * width + x
         const pixel = pixels[i]
         const pixelScore = target.score(pixel)
+        let add = false
         if (pixelScore) {
           if (chain) {
             chain.x2 = x
@@ -57,21 +37,51 @@ class Blob {
           } else {
             chain = new Chain(x, y)
           }
+          if (x === x2) {
+            add = true
+          }
         } else if (chain) {
-          add()
+          add = true
         }
-      }
-      if (chain) {
-        add()
+        if (add) {
+          chains[n++] = chain
+          for (let i = 0, l = ups.length; i < l; i++) {
+            const up = ups[i]
+            if ((up.x1 >= chain.x1 && up.x1 <= chain.x2) ||
+                (up.x2 >= chain.x1 && up.x2 <= chain.x2) ||
+                (up.x1 < chain.x1 && up.x2 > chain.x2)) {
+              if (chain.blob) {
+                if (up.blob !== chain.blob) {
+                  chain.blob.addBlob(up.blob)
+                }
+              } else if (lastChain && lastChain.blob === up.blob) {
+                lastChain.x2 = chain.x2
+                up.blob.score += score
+              } else {
+                up.blob.addChain(chain, score)
+              }
+            }
+          }
+          if (!chain.blob) {
+            const blob = new Blob(cam, target)
+            blob.addChain(chain, score)
+            blobs.push(blob)
+          }
+          lastChain = chain
+          chain = null
+          score = 0
+        }
       }
       ups = chains
     }
+    target.blobs = blobs
+    if (global.describe) return
     blobs.sort((a, b) => b.fitness - a.fitness)
     blobs.length = Math.min(blobs.length, target.limit)
     blobs.forEach(blob => {
-      blob.findCircle()
+      blob.findCentroidCircle()
+      blob.findOuterCircle()
     })
-    target.blobs = blobs
   }
 
   addChain (chain, score) {
@@ -87,7 +97,7 @@ class Blob {
     blob.score = 0
   }
 
-  findCircle () {
+  findCentroidCircle () {
     let xSum = 0
     let ySum = 0
     let area = 0
@@ -102,6 +112,22 @@ class Blob {
     this.area = area
     this.radius = Math.sqrt(area / Math.PI)
     this.fitness = this.score
+  }
+
+  findOuter () {
+    const { cam, chains } = this
+    const { pixels, width } = cam
+    const outer = this.outer = []
+    let i = 0
+    chains.forEach(chain => {
+      const yOffset = chain.y * width
+      outer[i++] = pixels[chain.x1 + yOffset]
+      outer[i++] = pixels[chain.x2 + yOffset]
+    })
+  }
+
+  findOuterCircle () {
+    this.findOuter()
   }
 }
 

@@ -4,8 +4,12 @@ class Pixel extends Color {
   constructor (cam, index, x, y) {
     super(0, 0, 0)
     this.cam = cam
+    this.index = index
     this.x = x
     this.y = y
+    this.sort = 0
+    this.baseHue = 0
+    this.baseSat = 0
   }
 
   distanceTo (o) {

@@ -1,26 +1,6 @@
-let rMin = 0
-let rMax = 255
-let gMin = 0
-let gMax = 255
-let bMin = 0
-let bMax = 255
-
 class Color {
   constructor (r, g, b) {
     this.setRgb(r, g, b)
-  }
-
-  static base (r, g, b) {
-    const avg = (r + g + b) / 3
-    rMax = 255 + (rMin = Math.round((r - avg) / 2))
-    gMax = 255 + (gMin = Math.round((g - avg) / 2))
-    bMax = 255 + (bMin = Math.round((b - avg) / 2))
-  }
-
-  adjustRgb (r, g, b) {
-    this.r = r = r < rMin ? 0 : r > rMax ? 255 : r - rMin
-    this.g = g = g < gMin ? 0 : g > gMax ? 255 : g - gMin
-    this.b = b = b < bMin ? 0 : b > bMax ? 255 : b - bMin
   }
 
   setRgb (r, g, b) {

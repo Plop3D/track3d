@@ -1,6 +1,8 @@
 /* global HTMLCanvasElement */
 import data from '../small'
 import Cam from '../../client/classes/cam'
+import Path from '../../client/classes/path'
+import Blob from '../../client/classes/blob'
 import Target from '../../client/classes/target'
 import dom from 'jsdom-global'
 
@@ -38,10 +40,10 @@ const targets = tracker.targets = [
 
 const cam = new Cam(tracker, 0.2)
 cam.updatePixels(data, 0, 0, 95, 71)
-cam.findPaths()
-cam.findBlobs(0, 0, 95, 71)
 cam.paths = []
 cam.blobs = []
+Path.search(cam, 0, 0, 95, 71)
+Blob.search(cam, 0, 0, 95, 71)
 targets.forEach(target => {
   target.paths.forEach(path => cam.paths.push(path))
   target.blobs.forEach(blob => cam.blobs.push(blob))

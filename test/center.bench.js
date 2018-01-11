@@ -9,14 +9,14 @@ bench('centering', function () {
       paths[i].findCentroidCircle()
     }
   })
-  it('pairs', function () {
+  it('outer', function () {
     for (let i = 0, l = paths.length; i < l; i++) {
-      paths[i].findPairsCircle()
+      paths[i].findOuterCircle()
     }
   })
-  it('culled pairs', function () {
+  it('chord', function () {
     for (let i = 0, l = paths.length; i < l; i++) {
-      paths[i].findCulledPairsCircle()
+      paths[i].findChordCircle()
     }
   })
 })

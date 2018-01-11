@@ -10,8 +10,8 @@ class Target extends Color {
     this.minSat = (options.minSat || 10) / 100 * 255
     this.limit = options.limit || 1
     this.paths = []
+    this.oldPaths = []
     this.blobs = []
-    this.circles = []
   }
 
   set hex (hex) {
