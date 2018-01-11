@@ -31,6 +31,7 @@ class Path {
     this.constructing = true
     this.pairs = []
     this.outer = []
+    this.arcs = []
     start.search = search
     start.path = this
     const pixels = this.pixels = [start]
@@ -173,7 +174,9 @@ class Path {
     let last = corners[end]
     for (let i = 0; i < length; i++) {
       const pixel = corners[i]
-      const angle = Math.atan2(pixel.y - last.y, pixel.x - last.x)
+      const dx = pixel.x - last.x
+      const dy = pixel.y - last.y
+      const angle = Math.atan2(dy, dx)
       angleTo[i] = angle
       last = pixel
     }
