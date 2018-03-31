@@ -1,5 +1,7 @@
 const MIN_LENGTH = 4
 const MIN_CIRCULARITY = 1
+const PI = Math.PI
+const RAD = PI * 2
 
 // const DIRECTION_LEFT = 0
 // const DIRECTION_AHEAD = 1
@@ -7,9 +9,11 @@ const DIRECTION_RIGHT = 2
 const DIRECTION_BACK = 3
 
 const stats = {
+  range: 0,
   centroid: 0,
   outer: 0,
-  chords: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+  chords: 0,
+  gravity: 0
 }
 
 let tracker
@@ -36,68 +40,80 @@ class Path {
     start.path = this
     const pixels = this.pixels = [start]
     const corners = [start]
+    const width = cam.width
     let direction = 0
     let pixel = start
     let t = 0
     let lastScore = 0
     let lastCorner = null
     let lastCornerOffset = 0
+    let minX = Infinity
+    let maxX = 0
+    let minY = Infinity
+    let maxY = 0
     while (++t < 1e3) {
       const adjacent = pixel.adjacent
       for (let turn = 0; turn < 4; turn++) {
         const candidate = adjacent[(direction + turn) % 4]
         if (!candidate) continue
         const score = target.score(candidate)
-        if (score) {
-          if (turn === DIRECTION_RIGHT) {
-            if (lastCorner) {
-              const offset = pixel.index - lastCorner.index
-              if (offset === lastCornerOffset) {
-                corners.pop()
-              }
-              lastCornerOffset = offset
+        if (!score) continue
+        if (turn === DIRECTION_RIGHT) {
+          if (lastCorner) {
+            const offset = pixel.index - lastCorner.index
+            if (offset === lastCornerOffset) {
+              corners.pop()
             }
-            corners.push(pixel)
-            lastCorner = pixel
+            lastCornerOffset = offset
           }
-          candidate.search = search
-          direction = (direction + turn + 3) % 4
-          pixel = candidate
-          if (turn === DIRECTION_BACK) {
-            pixels.pop().path = null
-            this.colorScore -= lastScore
-          } else {
-            candidate.path = this
-            pixels.push(candidate)
-            this.colorScore += score
-          }
-          lastScore = score
-          break
+          corners.push(pixel)
+          lastCorner = pixel
         }
+        candidate.search = search
+        direction = (direction + turn + 3) % 4
+        pixel = candidate
+        if (turn === DIRECTION_BACK) {
+          pixels.pop().path = null
+          this.colorScore -= lastScore
+        } else {
+          candidate.path = this
+          pixels.push(candidate)
+          this.colorScore += score
+          if (candidate.x < minX) minX = candidate.x
+          else if (candidate.x > maxX) maxX = candidate.x
+          if (candidate.y < minY) minY = candidate.y
+          else if (candidate.y > maxY) maxY = candidate.y
+        }
+        lastScore = score
+        break
       }
       if (pixel === start) {
         break
       }
     }
-    if (pixels.length < MIN_LENGTH) {
-      return
-    }
+    const length = pixels.length
+    if (length < MIN_LENGTH) return
     if (global.describe) {
       return target.paths.push(this)
     }
-    this.colorScore /= pixels.length
+    this.colorScore /= length
+    const circle = {
+      x: (minX + maxX) / 2,
+      y: (minY + maxY) / 2,
+      radius: Math.sqrt((maxX - minX) * (maxY - minY)) / 2,
+      method: 'range',
+      outer: corners
+    }
+    this.evaluateCircle(circle)
     this.findOuter(corners)
+    if (!this.outer.length) return
+    this.findArcCircle()
     this.findCentroidCircle()
     this.findOuterCircle()
-    for (let i = 0; i < 10; i++) {
-      this.findChordCircle(i)
+    this.findChordCircle()
+    for (let i = 0; i < 25; i++) {
+      this.findGravityCircle()
     }
-    // let improvement = 1
-    // while (improvement > 0.01) {
-    //   const circularity = this.circularity
-    //   // this.findOuterCircle()
-    //   improvement = this.circularity - circularity
-    // }
     const paths = target.paths
     for (let i = 0, l = paths.length; i < l; i++) {
       const path = paths[i]
@@ -140,7 +156,6 @@ class Path {
     paths.sort((a, b) => b.fitness - a.fitness)
     let fitnesses = []
     paths.forEach(path => fitnesses.push(path.fitness))
-    // console.log(fitnesses.join(' '))
   }
 
   findCentroidCircle () {
@@ -155,19 +170,17 @@ class Path {
     }
     const x = xSum / length
     const y = ySum / length
+    const center = { x, y }
     let ddSum = 0
     for (let i = 0; i < length; i++) {
-      const pixel = pixels[i]
-      const dx = x - pixel.x
-      const dy = y - pixel.y
-      ddSum += dx * dx + dy * dy
+      ddSum += distanceSquared(center, pixels[i])
     }
     const radius = Math.sqrt(ddSum / length)
     this.evaluateCircle({ x, y, radius, method: 'centroid' })
   }
 
   findOuter (corners) {
-    this.outer.length = 0
+    const outer = this.outer
     const length = corners.length
     const end = length - 1
     const angleTo = []
@@ -176,18 +189,19 @@ class Path {
       const pixel = corners[i]
       const dx = pixel.x - last.x
       const dy = pixel.y - last.y
-      const angle = Math.atan2(dy, dx)
-      angleTo[i] = angle
+      angleTo[i] = Math.atan2(dy, dx)
       last = pixel
     }
-    let next = angleTo[0]
-    for (let i = end; i >= 0; i--) {
+    let lastAngle = angleTo[end]
+    outer.length = 0
+    for (let i = 0; i < length; i++) {
       const angle = angleTo[i]
-      const diff = next - angle
-      if (diff > 0 || diff < -Math.PI) {
+      const diff = angle - lastAngle
+      const angleBetween = diff < -PI ? diff + RAD : diff > PI ? diff - RAD : diff
+      if (angleBetween > 0) {
         this.outer.push(corners[i])
       }
-      next = angle
+      lastAngle = angle
     }
   }
 
@@ -202,9 +216,7 @@ class Path {
       for (let j = 0; j < n; j++) {
         if (i !== j) {
           const b = outer[j % n]
-          const dx = a.x - b.x
-          const dy = a.y - b.y
-          const dd = dx * dx + dy * dy
+          const dd = distanceSquared(a, b)
           if (dd > ddMax) {
             ddMax = dd
             furthest = b
@@ -275,10 +287,7 @@ class Path {
         if (a === b) continue
         const x = a === true ? c : b === true ? d : (d - c) / (a - b)
         const y = b === true ? a * x + c : b * x + d
-        if (isNaN(x) || isNaN(y)) {
-          console.log('NaN y', a, b, c, d, x)
-          continue
-        }
+        if (isNaN(x) || isNaN(y)) continue
         xSum += x
         ySum += y
         n++
@@ -291,9 +300,94 @@ class Path {
     }
     circle.radius = rSum / length
     circle.method = 'chords'
-    circle.methodTry = time
     this.chordCircle = circle
     this.evaluateCircle(circle)
+  }
+
+  findGravityCircle (time) {
+    const { outer, x, y, radius } = this
+    const rr = radius * radius
+    let xSum = 0
+    let ySum = 0
+    let rSum = 0
+    let fSum = 0
+    for (let i = 0, l = outer.length; i < l; i++) {
+      const pixel = outer[i]
+      const dx = pixel.x - x
+      const dy = pixel.y - y
+      const dd = dx * dx + dy * dy
+      const d = Math.sqrt(dd)
+      const f = 1 / (Math.abs(rr - dd) + 0.01)
+      const a = (d - radius) / radius
+      xSum += (x + a * dx) * f
+      ySum += (y + a * dy) * f
+      rSum += d * f
+      fSum += f
+    }
+    const circle = {
+      x: xSum / fSum,
+      y: ySum / fSum,
+      radius: rSum / fSum,
+      method: 'gravity',
+      methodTry: time
+    }
+    this.evaluateCircle(circle)
+  }
+
+  findArcCircle () {
+    const pixels = this.outer
+    let length = pixels.length
+    const perps = this.perps = new Array(length)
+    let p1 = pixels[length - 1]
+    for (let i = 0; i < length; i++) {
+      const p2 = pixels[i]
+      const dx = p2.x - p1.x
+      const dy = p2.y - p1.y
+      const tx = p1.x + p2.x
+      const ty = p1.y + p2.y
+      const x = (tx - dy) / 2
+      const y = (ty + dx) / 2
+      let slope = -dx / dy
+      if (!isFinite(slope)) slope = true
+      const intercept = (slope === true ? x : y - slope * x)
+      perps[i] = { slope, intercept, end: p2 }
+      p1 = p2
+    }
+    const intersections = this.intersections = []
+    let { slope: a, intercept: c, end: vertex } = perps[length - 1]
+    for (let i = 0; i < length; i++) {
+      const { slope: b, intercept: d, end } = perps[i]
+      if (a !== b) {
+        const x = a === true ? c : b === true ? d : (d - c) / (a - b)
+        const y = b === true ? a * x + c : b * x + d
+        intersections.push({ x, y, vertex })
+      }
+      a = b
+      c = d
+      vertex = end
+    }
+    length = intersections.length
+    const dd = new Array(length)
+    let ddSum = 0
+    let last = intersections[length - 1]
+    for (let i = 0; i < length; i++) {
+      const intersection = intersections[i]
+      dd[i] = distanceSquared(intersection, last)
+      ddSum += dd[i]
+      last = intersection
+    }
+    const ddMean = ddSum / length
+    let arc = [intersections[length - 1].vertex]
+    const arcs = this.arcs = [arc]
+    for (let i = 0; i < length; i++) {
+      const pixel = intersections[i].vertex
+      if (dd[i] < ddMean) {
+        arc.push(pixel)
+      } else {
+        arcs.push(arc = [pixel])
+      }
+    }
+    arcs.sort((a, b) => b.length - a.length)
   }
 
   evaluateCircle (circle) {
@@ -302,14 +396,12 @@ class Path {
     }
     const radius = circle.radius
     const rr = radius * radius
-    const pixels = this.outer
+    const pixels = circle.outer || this.outer
     const length = pixels.length
     let circularity = 0
     for (let i = 0; i < length; i++) {
       const pixel = pixels[i]
-      const dx = pixel.x - circle.x
-      const dy = pixel.y - circle.y
-      const dd = dx * dx + dy * dy
+      const dd = distanceSquared(pixel, circle)
       const fit = 1 / (Math.abs(1 - dd / rr) + 0.01)
       circularity += (pixel.fit = fit)
     }
@@ -333,6 +425,12 @@ class Path {
   get fitness () {
     return this.circularity * this.colorScore * Math.sqrt(this.radius)
   }
+}
+
+function distanceSquared (a, b) {
+  const dx = a.x - b.x
+  const dy = a.y - b.y
+  return dx * dx + dy * dy
 }
 
 export default Path

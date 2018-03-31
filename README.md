@@ -1,29 +1,16 @@
-# Week 1
+# Track3D
 
-Build a scene with:
-* A sky (with an equirectangular image background).
-* A plane underneath you.
-* A totem pole of shapes stacked on top of each other.
-
-## Prerequisites
-
-TODO: Fill in info on how to install git, node, yarn...
-
-### Windows
-
-### Linux
-
-### OSX
+This is a 3D tracking library which uses a laptop or phone camera to find spheres with `(x, y, radius)`, and interpret them as `(x, y, z)`.
 
 ## Setup and Development
 
 ``` bash
 # Clone this repository.
-git clone git@gitlab.com:webvr-academy/week1.git
+git clone git@gitlab.com:Plop3D/track3d.git
 
 # Install dependencies
 yarn install
 
-# Serve with hot reloading at http://localhost:8000/
-npm run dev
+# Serve with hot reloading at http://localhost:9443/
+yarn run dev
 ```

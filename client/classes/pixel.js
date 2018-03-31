@@ -7,9 +7,9 @@ class Pixel extends Color {
     this.index = index
     this.x = x
     this.y = y
+    this.hue = 0
+    this.sat = 0
     this.sort = 0
-    this.baseHue = 0
-    this.baseSat = 0
   }
 
   distanceTo (o) {
@@ -26,6 +26,12 @@ class Pixel extends Color {
   subtract (vector) {
     this.x -= vector.x
     this.y -= vector.y
+  }
+
+  get foregroundness () {
+    const hueDiff = this.hue - this.backgroundHue
+    const satDiff = this.sat - this.backgroundSat
+    return Math.abs(hueDiff * satDiff)
   }
 }
 

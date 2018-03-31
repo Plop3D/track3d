@@ -2,16 +2,9 @@
 import Pixel from './pixel'
 import Path from './path'
 
-const DRAW_TIMEOUT = 1
+const DRAW_TIMEOUT = 0
 const ASPECT_RATIO = 0.75
-const BACKGROUND_WAIT = 10
-
-let rMin = 0
-let rMax = 255
-let gMin = 0
-let gMax = 255
-let bMin = 0
-let bMax = 255
+const MIN_FITNESS = 100
 
 class Cam {
   constructor (tracker, scale) {
@@ -65,10 +58,6 @@ class Cam {
             video.src = stream
           }
           this.draw()
-          this.pixels.forEach(pixel => {
-            pixel.baseHue = pixel.hue
-            pixel.baseSat = pixel.sat
-          })
         }, console.error)
       })
   }
@@ -108,7 +97,7 @@ class Cam {
   update () {
     this.frame++
     if (this.scale === 1) {
-      this.drawMini()
+      this.drawMain()
     } else {
       this.updateData(0, 0, this.width - 1, this.height - 1)
     }
@@ -120,13 +109,6 @@ class Cam {
     const data = this.context.getImageData(x1, y1, width, height).data
     this.updatePixels(data, x1, y1, x2, y2)
     Path.search(this, x1, y1, x2, y2)
-    if (this.frame % BACKGROUND_WAIT === 0) {
-      // this.updateBase(data, x1, y1, x2, y2)
-    }
-    // if (!(this.frame % 1e3)) {
-    //   console.log(data.length)
-    //   // window.io.emit('frame', data)
-    // }
   }
 
   updatePixels (data, x1, y1, x2, y2) {
@@ -140,9 +122,6 @@ class Cam {
         let r = data[n]
         let g = data[n + 1]
         let b = data[n + 2]
-        pixel.r = r = r < rMin ? 0 : r > rMax ? 255 : r - rMin
-        pixel.g = g = g < gMin ? 0 : g > gMax ? 255 : g - gMin
-        pixel.b = b = b < bMin ? 0 : b > bMax ? 255 : b - bMin
         let min = r < g ? r : g
         min = min < b ? min : b
         let max = r > g ? r : g
@@ -152,65 +131,18 @@ class Cam {
           : max === r ? (g - b) / sat + (g < b ? 6 : 0)
           : max === g ? (b - r) / sat + 2
           : (r - g) / sat + 4
+        pixel.r = r
+        pixel.g = g
+        pixel.b = b
         n += 4
       }
     }
   }
 
-  updateBase (data, x1, y1, x2, y2) {
-    const width = this.width
-    const pixels = this.pixels
-    const area = (x2 - x1 + 1) * (y2 - y1 + 1)
-    let rSum = 0
-    let gSum = 0
-    let bSum = 0
-    for (let y = y1; y <= y2; y++) {
-      for (let x = x1; x <= x2; x++) {
-        const i = y * width + x
-        const pixel = pixels[i]
-        rSum += pixel.r
-        gSum += pixel.g
-        bSum += pixel.b
-      }
-    }
-    const r = rSum / area
-    const g = gSum / area
-    const b = bSum / area
-    const avg = (r + g + b) / 3
-    rMax = 255 + (rMin = Math.round((r - avg) / 2))
-    gMax = 255 + (gMin = Math.round((g - avg) / 2))
-    bMax = 255 + (bMin = Math.round((b - avg) / 2))
-    for (let y = y1; y <= y2; y++) {
-      for (let x = x1; x <= x2; x++) {
-        const i = y * width + x
-        const pixel = pixels[i]
-        const hueDiff = pixel.hue - pixel.baseHue
-        const satDiff = pixel.sat - pixel.baseSat
-        const product = hueDiff * satDiff
-        const absProduct = product < 0 ? -product : product
-        if (absProduct < 80) {
-          const denominator = absProduct + 20
-          pixel.baseHue += hueDiff / denominator
-          pixel.baseSat += satDiff / denominator
-        }
-        if (i === this.area / 2) {
-          //  console.log(r, g, b)
-        }
-      }
-    }
-  }
-
-  drawMini () {
+  drawMain () {
     const size = Math.round(1 / this.tracker.miniCam.scale)
     const offset = size / 2
     const context = this.context
-    // this.pixels.forEach(pixel => {
-    //   context.fillStyle = `hsl(${pixel.baseHue * 60},${Math.ceil(pixel.baseSat / 2.55)},50%)`
-    //   if (pixel.x === this.width / 2 && pixel.y === this.height / 2) {
-    //     console.log(context.fillStyle)
-    //   }
-    //   context.fillRect(pixel.x * size, pixel.y * size, size, size)
-    // })
     this.tracker.targets.forEach(target => {
       target.paths.forEach((path, index) => {
         path.pixels.forEach(pixel => {
@@ -220,14 +152,38 @@ class Cam {
         if (path.perps) {
           path.perps.forEach(perp => {
             context.strokeStyle = '#fff'
-            context.lineWidth = 1
+            context.lineWidth = 0.8
             context.beginPath()
             context.moveTo(perp.x1 * size + offset, perp.y1 * size + offset)
             context.lineTo(perp.x2 * size + offset, perp.y2 * size + offset)
             context.stroke()
           })
         }
-        if (index < target.limit && path.fitness > 100) {
+        if (path.intersections) {
+          path.intersections.forEach(intersection => {
+            if (intersection) {
+              context.fillStyle = '#f00'
+              context.fillRect(intersection.x * size - offset, intersection.y * size - offset, size + offset * 2, size + offset * 2)
+            }
+          })
+        }
+        const colors = [ '#3f9', '#f0f' ]
+        if (path.arcs) {
+          const a = []
+          path.arcs.forEach((arc, i) => {
+            context.strokeStyle = colors[i % 2]
+            context.lineWidth = 5
+            context.beginPath()
+            let n = 0
+            arc.forEach((point, j) => {
+              context[j ? 'lineTo' : 'moveTo'](point.x * size + offset, point.y * size + offset)
+              n++
+            })
+            context.stroke()
+            a[i] = n
+          })
+        }
+        if (index < target.limit && path.fitness > MIN_FITNESS) {
           path.outer.forEach(pixel => {
             context.fillStyle = '#fff'
             context.fillRect(pixel.x * size, pixel.y * size, size, size)
@@ -240,8 +196,8 @@ class Cam {
             context.lineTo(pair.b.x * size + offset, pair.b.y * size + offset)
             context.stroke()
           })
-          context.strokeStyle = 'white'
-          context.lineWidth = 3
+          context.strokeStyle = '#fff'
+          context.lineWidth = 2
           context.beginPath()
           context.arc(path.x * size + offset, path.y * size + offset, path.radius * size + offset + size, 0, 2 * Math.PI)
           context.stroke()

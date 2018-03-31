@@ -13,7 +13,7 @@
       }
       window.tracker =
         Tracker.track('.track3d')
-          .target({ hex: '#092', hueTolerance: 25, minSat: 30, name: 'green', limit: 2 })
+          .target({ hex: '#185', hueTolerance: 25, minSat: 25, name: 'green', limit: 2 })
           .target({ hex: '#14d', hueTolerance: 25, minSat: 35, name: 'blue', limit: 2 })
           .target({ hex: '#ff2', hueTolerance: 25, minSat: 40, name: 'yellow', limit: 2 })
     }

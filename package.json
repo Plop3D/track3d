@@ -7,11 +7,12 @@
   "scripts": {
     "dev": "lighter-run server/server.js",
     "start": "pm2 start server/server.js",
+    "stop": "pm2 stop server/server.js",
     "test": "./node_modules/.bin/exam --require babel-register",
     "testw": "./node_modules/.bin/exam --require babel-register --watch",
     "mocha": "./node_modules/.bin/mocha --require babel-register",
     "mochaw": "./node_modules/.bin/mocha --require babel-register --watch",
-    "bench": "./node_modules/.bin/exam --require babel-register --grep bench --multi-process --bench --bench-time 10000"
+    "bench": "./node_modules/.bin/exam --require babel-register --grep bench --multi-process --bench --bench-time 60000"
   },
   "dependencies": {
     "cedar": "0.3.2",
